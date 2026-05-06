@@ -1,11 +1,28 @@
-const rodCounts = [1, 3, 4, 4, 3, 1];
-const rodTeams = ["p1", "p2", "p1", "p2", "p1", "p2"];
+
 
 const FIELD_W = 920;
 const FIELD_H = 516;
 
+let rods = [
+  { count: 1, team: "p1", x: 0, offsetY: 0, angle: 0 },
+  { count: 3, team: "p2", x: 0, offsetY: 0, angle: 0 },
+  { count: 4, team: "p1", x: 0, offsetY: 0, angle: 0 },
+  { count: 4, team: "p2", x: 0, offsetY: 0, angle: 0 },
+  { count: 3, team: "p1", x: 0, offsetY: 0, angle: 0 },
+  { count: 1, team: "p2", x: 0, offsetY: 0, angle: 0 }
+];
+
+
+//Drawing Field
+
 function setup() {
   createCanvas(1000, 600, WEBGL);
+
+  const rodsX = getRodXPositions();
+  for (let i = 0; i < rods.length; i++){
+    rods[i].x = rodsX[i];
+  }
+  
 }
 
 function draw() {
@@ -14,8 +31,10 @@ function draw() {
   // camera fixed
   camera(0, -720, 620, 0, 0, 0, 0, 0, -1);
 
-  ambientLight(90);
+  ambientLight(120);
   directionalLight(255, 255, 255, -0.5, 0.8, -1);
+
+  updateSelectedRod();
 
   drawTable();
   drawFieldLines();
@@ -23,7 +42,7 @@ function draw() {
 }
 
 function drawTable() {
-  // field
+
   push();
   translate(0, 0, 0);
   noStroke();
@@ -85,8 +104,8 @@ function drawFieldLines() {
   pop();
 
   // goal boxes
-  drawGoalBox(-FIELD_W / 2 + 80, 0);
-  drawGoalBox(FIELD_W / 2 - 80, 0);
+  drawGoalBox(-FIELD_W / 2 + 40, 0);
+  drawGoalBox(FIELD_W / 2 - 40, 0);
 }
 
 function drawLineBox(x, y, w, h, z) {
@@ -94,12 +113,12 @@ function drawLineBox(x, y, w, h, z) {
   translate(x, y, z);
   noStroke();
   fill(255);
-  box(w, h, 3);
+  box(w, h, 2);
   pop();
 }
 
 function drawGoalBox(cx, cy) {
-  const goalW = 140;
+  const goalW = FIELD_W* 0.1;
   const goalH = FIELD_H * 0.32;
   const z = 14;
 
@@ -120,71 +139,110 @@ function getRodXPositions() {
   return positions;
 }
 
-function drawAllRods() {
-  const xs = getRodXPositions();
+//Drawing Rods, Foosmen
 
-  for (let i = 0; i < xs.length; i++) {
-    drawRod(xs[i], rodCounts[i], rodTeams[i]);
+const Rod_Z = 55; 
+const Rod_RADIUS = 7;
+const Handle_RADIUS = 14; 
+
+const Rod_Top_RATIO = 0.42; 
+const Rod_Bottom_RATIO = 0.42;
+
+
+
+function drawAllRods() {
+
+  for (let i = 0; i < rods.length; i++) {
+    
+    drawRodGroup(rods[i], i);
   }
 }
 
-function drawRod(x, count, team) {
-  const top = -FIELD_H * 0.42;
-  const bottom = FIELD_H * 0.42;
-  const rodLength = bottom - top;
+function drawRodGroup(rod, index) {
+    // const x = rod.x;
+    // const count = rod.count;
+    // const team = rod.team;
+    const selectedRod = getSelectedRod();
+    const isSelected = index === selectedRod;
 
-  // metal rod
-  push();
-  translate(x, 0, 55);
-  fill(190);
-  noStroke();
+    const top = -FIELD_H * Rod_Top_RATIO;
+    const bottom = FIELD_H * Rod_Bottom_RATIO ;
+    const rodLength = bottom - top;
 
-  if (team === "p1") {
+  // rod group translate
+    push();
+
+    translate(rod.x, rod.offsetY, Rod_Z);
+    rotateY(rod.angle);
+
+    drawMetalRod(rod, rodLength);
+    drawHandle(rod,top,bottom, isSelected);
+    drawAllFoosmen(rod, top, rodLength);
+
+    pop();
+
+}
+
+function drawMetalRod(rod, rodLength){
+    fill(190);
+    noStroke();
+
+    if (rod.team === "p1") {
+        
+        cylinder(Rod_RADIUS, rodLength + 300);
+    } else {
+        cylinder(Rod_RADIUS, rodLength + 250);
+    }
+}
+
+//Handle
+function drawHandle(rod, top, bottom, isSelected){
     
-    cylinder(7, rodLength + 300);
+    noStroke();
+
+    if(isSelected){
+        ambientMaterial(255,77,0);
+    } else {
+        ambientMaterial(20, 30, 70);
+    }
+    
+    
+    if (rod.team === "p1") {
+    
+    push();
+    translate(0, top - 180, 0);
+    cylinder(Handle_RADIUS, 65);
+    pop();
+
+    push();
+    translate(0, bottom + 150, 0);
+    cylinder(Handle_RADIUS, 20);
+    pop();
+
   } else {
-    cylinder(7, rodLength + 250);
-  }
-
-  pop();
-
-  // handles
-  push();
-  noStroke();
-  ambientMaterial(20, 30, 70);
-
-  if (team === "p1") {
     
     push();
-    translate(x, top - 180, 55);
-    cylinder(14, 65);
+    translate(0, top - 125, 0);
+    cylinder(Handle_RADIUS, 20);
     pop();
 
     push();
-    translate(x, bottom + 75, 55);
-    cylinder(14, 40);
-    pop();
-
-  } else {
-    
-    push();
-    translate(x, top - 125, 55);
-    cylinder(14, 20);
-    pop();
-
-    push();
-    translate(x, bottom + 75, 55);
-    cylinder(14, 40);
+    translate(0, bottom + 150, 0);
+    cylinder(Handle_RADIUS, 40);
     pop();
   }
-  pop();
+}
 
   // foosmen
-  const gap = rodLength / (count + 1);
-  for (let i = 0; i < count; i++) {
-    const y = top + gap * (i + 1);
-    drawFoosman(x, y, team);
-  }
+
+  function drawAllFoosmen(rod, top, rodLength){
+
+    const gap = rodLength / (rod.count + 1);
+
+    for (let i = 0; i < rod.count; i++) {
+        const y = top + gap * (i + 1);
+        drawFoosman(0, y, rod.team);
+    }
 }
 
 
@@ -199,25 +257,78 @@ function drawFoosman(x, y, team) {
 
   // body
   push();
-  translate(x, y, 42);
-  fill(c);
+  translate(x, y, 42 - Rod_Z);
+  ambientMaterial(c);
   noStroke();
   box(28, 22, 55);
   pop();
 
   // head
   push();
-  translate(x, y, 82);
-  fill(c);
+  translate(x, y, 82 - Rod_Z);
+  ambientMaterial(c);
   noStroke();
   sphere(15);
   pop();
 
   // small foot
   push();
-  translate(x, y, 15);
+  translate(x, y, 15 - Rod_Z);
   fill(c);
   noStroke();
   box(36, 18, 14);
   pop();
+}
+
+//Selecting Rod 
+
+let p1RodIndexes = [4, 2, 0];
+let selectedP1Rod = 1;
+
+function getSelectedRod(){
+    return p1RodIndexes[selectedP1Rod];
+}
+
+function keyPressed(){
+     const previousRodIndex = getSelectedRod();
+
+    if(keyCode ===LEFT_ARROW){
+        selectedP1Rod = max(0, selectedP1Rod - 1);
+  }
+
+    if (keyCode === RIGHT_ARROW) {
+        selectedP1Rod = min(p1RodIndexes.length - 1, selectedP1Rod + 1);
+    }
+    const newRodIndex = getSelectedRod();
+
+    if (previousRodIndex !== newRodIndex) {
+        rods[previousRodIndex].offsetY = 0;
+  }
+}
+
+
+
+//Rod Moving
+
+const  Rod_Speed = 4; 
+
+function updateSelectedRod(){
+    const rodIndex = getSelectedRod();
+    const rod = rods[rodIndex];
+
+    if (keyIsDown(UP_ARROW)) {
+        rod.offsetY += Rod_Speed;
+    }
+
+    if (keyIsDown(DOWN_ARROW)){
+        rod.offsetY -= Rod_Speed;
+    }
+
+    const top = -FIELD_H * Rod_Top_RATIO;
+    const bottom = FIELD_H * Rod_Bottom_RATIO;
+
+    const minOffsetY = -FIELD_H / 2 - top;
+    const maxOffsetY = FIELD_H / 2 - bottom;
+
+    rod.offsetY = constrain(rod.offsetY, minOffsetY, maxOffsetY);
 }
