@@ -70,9 +70,39 @@ function renderGameUI(config) {
   }
 
   if (gameState === "gameover") {
+
+    const elapsedGameOver = millis() - gameOverStartTime;
+
     uiLayer.textAlign(CENTER, CENTER);
-    uiLayer.textSize(40);
-    uiLayer.text("GAME OVER", uiLayer.width / 2, uiLayer.height / 2);
+
+    if (elapsedGameOver < 1000) {
+      uiLayer.textSize(40);
+      uiLayer.fill(255);
+      uiLayer.text("GAME OVER", uiLayer.width / 2, uiLayer.height / 2);
+    } else {
+      uiLayer.imageMode(CENTER);
+
+      let resultImg;
+      if (scoreP1 === scoreP2) {
+        resultImg = drawImg;
+      } else if (scoreP1 > scoreP2) {
+        resultImg = winImg;
+      } else {
+        resultImg = loseImg;
+      }
+
+      const resultW = 600;
+      const resultRatio = resultImg.width / resultImg.height;
+      const resultH = resultW / resultRatio;
+
+      uiLayer.image(
+        resultImg,
+        uiLayer.width / 2,
+        uiLayer.height / 2,
+        resultW,
+        resultH
+      );
+    }
   }
 
   const isTimeOver = remainingTime <= 0;

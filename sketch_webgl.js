@@ -33,21 +33,32 @@ const goalz = 14;
 let goalImg;
 let scoreUIImg;
 let timerUIImg;
+let winImg;
+let loseImg;
+let drawImg;
 let uiLayer;
 let mainCanvas;
 
 let isGoal = false;
 let goalStartTime = 0;
 const goalShowTime = 2000;
+let gameOverStartTime = 0;
+
+const OPPONENT_KICK_COOLDOWN = 800;
+let lastOpponentKickTime = 0;
 
 function preload(){
     goalImg = loadImage("goal.png");
     scoreUIImg = loadImage("scoreUI.png");
     timerUIImg = loadImage("Timer.png");
+    winImg = loadImage("win.png");
+    loseImg = loadImage("lose.png");
+    drawImg = loadImage("draw.png");
 
     gameFont = loadFont("PressStart2P.ttf");
-} 
-//Drawing Ball 
+}
+
+// --- Ball ---
 
 let ball = {
   x: 0,
@@ -100,14 +111,27 @@ function updateBall(){
 
     ball.vx *= 0.99;
     ball.vy *= 0.99;
+
+    keepBallMoving();
+}
+
+function keepBallMoving() {
+  const minSpeed = 0.7;
+  const speed = sqrt(ball.vx * ball.vx + ball.vy * ball.vy);
+
+  if (speed > 0 && speed < minSpeed) {
+    const scale = minSpeed / speed;
+
+    ball.vx *= scale;
+    ball.vy *= scale;
+  }
 }
 
 
 
 
 
-
-//Drawing Field
+// --- Field·Canvas ---
 
 function setup() {
   mainCanvas = createCanvas(1000, 600, WEBGL);
@@ -148,10 +172,9 @@ function draw() {
   ambientLight(120);
   directionalLight(255, 255, 255, -0.5, 0.8, -1);
 
-    if (gameState === "playing") {
-  updateSelectedRod();
-  updateBall();
-    }
+  if (gameState === "playing") {
+    updatePlayingWorld();
+  }
 
   drawTable();
   drawFieldLines();
@@ -176,6 +199,13 @@ function draw() {
     }
   }
   
+}
+
+// --- 플레이 중 물리·입력 한 틱 ---
+function updatePlayingWorld() {
+  updateSelectedRod();
+  updateOpponentPlayer();
+  updateBall();
 }
 
 function syncUILayerPosition() {
@@ -272,7 +302,7 @@ function drawGoalBox(cx, cy) {
 }
 
 
-//get X position of rods
+// --- Rod X Position ---
 function getRodXPositions() {
   const positions = [];
 
@@ -284,14 +314,14 @@ function getRodXPositions() {
   return positions;
 }
 
-//Drawing Rods, Foosmen
+// --- Drawing Rods·Foosmen ---
 
 const Rod_Z = 55; 
 const Rod_RADIUS = 7;
 const Handle_RADIUS = 14; 
 
-const Rod_Top_RATIO = 0.42; 
-const Rod_Bottom_RATIO = 0.42;
+const Rod_Top_RATIO = 0.54; 
+const Rod_Bottom_RATIO = 0.54;
 
 const RodTop = -FIELD_H * Rod_Top_RATIO;
 const RodBottom = FIELD_H * Rod_Bottom_RATIO;
@@ -439,9 +469,10 @@ function drawFoosman(x, y, team) {
   pop();
 }
 
-//Selecting Rod 
+// --- Selecting Rod ---
 
 let p1RodIndexes = [4, 2, 0];
+let p2RodIndexes = [1, 3, 5];
 let selectedP1Rod = 1;
 
 function getSelectedRod(){
@@ -478,7 +509,7 @@ function keyPressed(){
 
 
 
-//Rod (Slide) Moving
+// --- Rod (Slide) Moving ---
 
 const  Rod_Speed = 4; 
 
@@ -519,7 +550,7 @@ function getRodMoveLimits(rod){
 
 
 
-//Rode Rotation
+// --- Rod (Rotation)·Kick Input ---
 
 let spacePressedTime = 0;
 let isChargingRotation = false; 
@@ -576,7 +607,7 @@ function rotateSelectedRod(duration) {
 
 
 
-// Ball Server 
+// --- Ball Server ---
 
 function getServerRod(team){
     if (team =="p1"){
@@ -607,7 +638,7 @@ function resetBallServer(team){
     ball.vy = 0;
 }
 
-// Kick Logic, Foosmen Position 
+// --- 킥·푸스맨 위치·충돌 ---
 
 const KICK_RANGE = 65 ;
 const FOOSMAN_COLLI_RADIUS = 28;
@@ -698,20 +729,33 @@ function checkBallFoosmanCollision() {
 function resolveBallFoosmanCollision(foosman) {
   const dx = ball.x - foosman.x;
   const dy = ball.y - foosman.y;
+  let d = sqrt(dx * dx + dy * dy);
 
-  if (abs(dx) > abs(dy)) {
-    ball.vx *= -1;
-  } else {
-    ball.vy *= -1;
+  if (d < 0.001) {
+    dx = random(-1, 1);
+    dy = random(-1, 1);
+    d = sqrt(dx * dx + dy * dy);
   }
 
-  // 공이 foosman 안에 끼는 것 방지
-  ball.x += ball.vx;
-  ball.y += ball.vy;
+  const minDist = ball.r + FOOSMAN_COLLI_RADIUS;
+
+  // 정규화된 밀어내기 방향
+  const nx = dx / d;
+  const ny = dy / d;
+
+  // 공을 foosman 밖으로 밀어냄
+  ball.x = foosman.x + nx * minDist;
+  ball.y = foosman.y + ny * minDist;
+
+  // 튕기는 속도 부여
+  const speed = max(2.5, sqrt(ball.vx * ball.vx + ball.vy * ball.vy));
+
+  ball.vx = nx * speed;
+  ball.vy = ny * speed;
 }
 
 
-// Goal 
+// --- Goal ---
 
 function checkGoal() {
   const leftGoalX = -FIELD_W / 2 + 40;
@@ -755,7 +799,7 @@ function startGoalEffect(serverTeam) {
   ball.vy = 0;
 }
 
-//draw UI 
+// --- UI (ui.js) ---
 
 function drawUI() {
   const uiResult = renderGameUI({
@@ -773,8 +817,112 @@ function drawUI() {
 
   if (uiResult.isTimeOver && gameState === "playing") {
     gameState = "gameover";
+    gameOverStartTime = millis();
     ball.vx = 0;
     ball.vy = 0;
   }
 }
 
+
+// --- 상대(Opponent) Player ---
+
+function moveOpponentRod(rod){
+    const opponentSpeed = 2.2
+    const nearestFoosman = getNearestFoosmanOnRod(rod);
+
+    if(nearestFoosman ===null) return; 
+
+    const targetY = ball.y;
+    const currentY = nearestFoosman.y;
+
+    if (currentY < targetY) {
+        rod.offsetY += opponentSpeed;
+    } else if (currentY > targetY) {
+        rod.offsetY -= opponentSpeed;
+    }
+
+    const limits = getRodMoveLimits(rod);
+    rod.offsetY = constrain(rod.offsetY, limits.min, limits.max);
+
+}
+
+function getClosestOpponentRodToBall() {
+  let closestRod = null;
+  let closestDist = Infinity;
+
+  for (let i = 0; i < p2RodIndexes.length; i++) {
+    const rodIndex = p2RodIndexes[i];
+    const rod = rods[rodIndex];
+
+    const d = abs(ball.x - rod.x);
+
+    if (d < closestDist) {
+      closestDist = d;
+      closestRod = rod;
+    }
+  }
+
+  return closestRod;
+}
+
+
+// --- Nearest Foosman on Rod ---
+function getNearestFoosmanOnRod(rod) {
+  const foosmen = getFoosmanPosition(rod);
+
+  let nearest = null;
+  let nearestDist = Infinity;
+
+  for (let i = 0; i < foosmen.length; i++) {
+    const f = foosmen[i];
+
+    // y 차이만 비교
+    const d = abs(ball.y - f.y);
+
+    if (d < nearestDist) {
+      nearestDist = d;
+      nearest = f;
+    }
+  }
+
+  return nearest;
+}
+
+function updateOpponentPlayer() {
+  const targetRod = getClosestOpponentRodToBall();
+
+  if (targetRod === null) return;
+
+  moveOpponentRod(targetRod);
+  tryOpponentKick(targetRod);
+}
+
+function tryOpponentKick(rod) {
+
+    const now = millis();
+
+    if (now - lastOpponentKickTime < OPPONENT_KICK_COOLDOWN) {
+        return;
+    }
+
+  const result = getNearestFoosman(rod);
+
+  if (result.distance < KICK_RANGE) {
+
+    console.log("opponent kick")
+    
+    lastOpponentKickTime = now;
+    
+    const kickSpped = 8;
+    ball.vx = -kickSpped;
+
+    const hitOffsetY = ball.y - result.foosman.y;
+    ball.vy = constrain(hitOffsetY * 0.25, -4, 4);
+
+    rod.angle = radians(45);
+
+    setTimeout(() => {
+      rod.angle = 0;
+    }, 120);
+  }
+}
