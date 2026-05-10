@@ -1,9 +1,9 @@
-# Project 1
+# Project 1: Table Kickoer
 
 - **Name**: Jisu Park  
 - **Student ID**: 20265185  
-- **Repository URL**: https://github.com/isupark/20265185_Project1.git  
-- **YouTube Link**:  
+- **Repository URL**: https://github.com/isupark/20265185_Project1.git
+- **YouTube Link**:  : https://youtu.be/IzRu6SUUkAM
 
 ---
 
