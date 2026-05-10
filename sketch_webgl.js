@@ -481,6 +481,7 @@ function getSelectedRod(){
 
 function keyPressed(){
     if (keyCode === ENTER && gameState === "start") {
+ 
     gameState = "playing";
     gameStartTime = millis();
     pausedTime = 0;
@@ -489,10 +490,12 @@ function keyPressed(){
      const previousRodIndex = getSelectedRod();
 
     if(keyCode ===LEFT_ARROW){
+        inputState.left = true;
         selectedP1Rod = max(0, selectedP1Rod - 1);
   }
 
     if (keyCode === RIGHT_ARROW) {
+        inputState.right = true;
         selectedP1Rod = min(p1RodIndexes.length - 1, selectedP1Rod + 1);
     }
     const newRodIndex = getSelectedRod();
@@ -501,6 +504,8 @@ function keyPressed(){
         rods[previousRodIndex].offsetY = 0;
   }
     if (key === ' ' && !isChargingRotation) {
+
+        inputState.kick = true;
         spacePressedTime = millis();
         isChargingRotation = true;
   }
@@ -516,6 +521,9 @@ const  Rod_Speed = 4;
 function updateSelectedRod(){
     const rodIndex = getSelectedRod();
     const rod = rods[rodIndex];
+
+    inputState.up = keyIsDown(UP_ARROW);
+    inputState.down = keyIsDown(DOWN_ARROW);
 
     if (keyIsDown(UP_ARROW)) {
         rod.offsetY += Rod_Speed;
@@ -556,20 +564,33 @@ let spacePressedTime = 0;
 let isChargingRotation = false; 
 
 function keyReleased(){
+     if(keyCode === LEFT_ARROW){
+        inputState.left = false;
+    }
+
+    if(keyCode === RIGHT_ARROW){
+        inputState.right = false;
+    }
+
+    if (key === ' ') {
+        inputState.kick = false;
+    }
+
     if (key === ' ' && isChargingRotation){
+
         const pressDuration = millis() - spacePressedTime;
 
         rotateSelectedRod(pressDuration);
         kickSelectedRod(pressDuration)
 
         if (canSelectedKick()) {
-        console.log("kick possible");
+            console.log("kick possible");
         } else {
-        console.log("too far");
+            console.log("too far");
         }
 
         isChargingRotation = false;
-  }
+    }
 }
 
 function getKickStrength(duration) {
@@ -815,6 +836,8 @@ function drawUI() {
     gameFont
   });
 
+    drawInputOverlay();
+
   if (uiResult.isTimeOver && gameState === "playing") {
     gameState = "gameover";
     gameOverStartTime = millis();
@@ -925,4 +948,150 @@ function tryOpponentKick(rod) {
       rod.angle = 0;
     }, 120);
   }
+}
+
+
+//---Inpu Overlay---
+
+let inputState = {
+  left: false,
+  right: false,
+  up: false,
+  down: false,
+  kick: false
+};
+
+
+function drawInputOverlay() {
+  uiLayer.push();
+
+const panelW = 250;
+const panelH = 135;
+
+const x = width - panelW ;
+const y = height - panelH  + 60;
+
+  uiLayer.textFont(gameFont);
+  uiLayer.textAlign(CENTER, CENTER);
+
+  const overlayPanelX = x - 30;
+  const overlayPanelY = y - 65;
+  const overlayPanelW = 250;
+  const overlayPanelH = 100;
+
+  const chargeBarH = 16;
+  const chargeGapAbovePanel = 10;
+  const chargeBarY = overlayPanelY - chargeGapAbovePanel - chargeBarH;
+  const chargeBarWidthRatio = 0.95;
+  const chargeBarW = overlayPanelW * chargeBarWidthRatio;
+  const chargeBarX = overlayPanelX + (overlayPanelW - chargeBarW) / 2;
+
+  drawKickChargeBar(chargeBarX, chargeBarY, chargeBarW, chargeBarH);
+
+  drawOverlayPanel(overlayPanelX, overlayPanelY, overlayPanelW, overlayPanelH);
+
+  drawKeyButton(x + 45, y - 35, "↑", inputState.up, 38, 38);
+  drawKeyButton(x, y + 5, "←", inputState.left, 38, 38);
+  drawKeyButton(x + 45, y + 5, "↓", inputState.down, 38, 38);
+  drawKeyButton(x + 90, y + 5, "→", inputState.right, 38, 38);
+
+  drawKeyButton(x + 170, y + 5, "KICK", inputState.kick, 78, 38);
+
+//   uiLayer.fill(255, 220);
+//   uiLayer.noStroke();
+//   uiLayer.textSize(8);
+//   uiLayer.text("INPUT", x + 85, y - 55);
+
+  uiLayer.pop();
+}
+
+function drawOverlayPanel(x, y, w, h) {
+  uiLayer.push();
+
+  uiLayer.noStroke();
+  uiLayer.fill(0, 130);
+  uiLayer.rect(x + 4, y + 4, w, h, 16);
+
+  uiLayer.fill(15, 25, 45, 50);
+  uiLayer.stroke(80, 180, 255, 180);
+  uiLayer.strokeWeight(2);
+  uiLayer.rect(x, y, w, h, 16);
+
+  uiLayer.pop();
+}
+
+function drawKeyButton(x, y, label, active, w, h) {
+  uiLayer.push();
+
+  uiLayer.rectMode(CENTER);
+  uiLayer.textAlign(CENTER, CENTER);
+  uiLayer.textSize(10);
+
+  if (active) {
+    uiLayer.fill(255, 120, 30);
+    uiLayer.stroke(255, 230, 120);
+    uiLayer.strokeWeight(3);
+  } else {
+    uiLayer.fill(25, 35, 60);
+    uiLayer.stroke(120, 150, 190);
+    uiLayer.strokeWeight(2);
+  }
+
+  uiLayer.rect(x, y, w, h, 8);
+
+  if (active) {
+    uiLayer.fill(20);
+  } else {
+    uiLayer.fill(230);
+  }
+
+  uiLayer.noStroke();
+  uiLayer.text(label, x, y + 1);
+
+  uiLayer.pop();
+}
+
+
+//---chargebar ---
+
+function drawKickChargeBar(x, y, w, h) {
+  uiLayer.push();
+
+  let charge = 0;
+
+  if (isChargingRotation) {
+    const duration = millis() - spacePressedTime;
+    charge = constrain(duration / 600, 0, 1);
+  }
+
+  uiLayer.noStroke();
+  uiLayer.fill(255, 220);
+  uiLayer.textSize(7);
+  uiLayer.textAlign(LEFT, CENTER);
+  uiLayer.text("KICK CHARGE", x, y - 9);
+
+  uiLayer.fill(10, 15, 30, 230);
+  uiLayer.rect(x, y, w, h, 8);
+
+  if (charge > 0) {
+    uiLayer.fill(255, 120, 30);
+    uiLayer.rect(x, y, w * charge, h, 8);
+  }
+
+  uiLayer.noFill();
+  uiLayer.stroke(255, 230, 120, 180);
+  uiLayer.strokeWeight(1.5);
+  uiLayer.rect(x, y, w, h, 8);
+
+  // 3단계 기준선
+  uiLayer.stroke(255, 255, 255, 120);
+  uiLayer.strokeWeight(1);
+
+  const mark1 = x + w * (200 / 600);
+  const mark2 = x + w * (400 / 600);
+
+  uiLayer.line(mark1, y, mark1, y + h);
+  uiLayer.line(mark2, y, mark2, y + h);
+
+  uiLayer.pop();
 }

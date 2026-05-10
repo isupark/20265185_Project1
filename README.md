@@ -1,140 +1,287 @@
-# Project1
+# Project 1
 
-
-- **Name**: Jisu Park
+- **Name**: Jisu Park  
 - **Student ID**: 20265185  
-- **Repository URL** : https://github.com/isupark/20265185_Project1.git
-- **Youtube Link** : 
+- **Repository URL**: https://github.com/isupark/20265185_Project1.git  
+- **YouTube Link**:  
 
-## 1. Description of the Game 
+---
 
-## 2. Description of the Code 
+# 1. Description of the Game
 
-[Component Drawing]
+This project is a digital table soccer game inspired by the classic *Table Kicker* (foosball) game.
 
-Step 1. 2D Field 구현 (sketch.js) → p5.js WEBGL을 사용해 3D Field로 확장 (sketch_webgl.js)
-- Field, wall, center line, goal box를 3D 오브젝트로 구현함.
-- rod와 foosmen의 위치를 3D 좌표계 기준으로 배치함.
+The player selects rods, moves them vertically, and rotates them to kick the ball using the foosmen attached to each rod. The objective is to score more goals than the opponent within the limited game time.
 
-Step 2. Rod와 foosmen 구조 객체화
-- 초기 코드에는 rodCounts, rodTeams, x positions를 각각 따로 관리했음.
-- 이후 rods 객체 배열을 생성하여 rod 하나의 정보를 하나의 객체로 관리함.
-- 각 rod 객체는 다음 값을 가짐:
-  { count: 4, team: "p2", x: 0, offsetY: 0, angle: 0 }
+The game was implemented using **p5.js WEBGL**, allowing the traditional 2D table soccer game to be extended into a 3D interactive environment.
 
-    여기서:
-    - count: foosmen 개수
-    - team: player 구분
-    - x: rod의 x축 위치
-    - offsetY: rod의 상하 이동값
-    - angle: rod의 회전값
+Key implementation features include:
 
-Step 3. Rod 그룹 구조 생성
-- drawAllRods()에서 rod 객체 하나씩 drawRodGroup()으로 전달함.
-- drawRodGroup() 안에서 push()/pop()을 사용해 rod, handle, foosmen을 하나의 그룹처럼 그림.
-- 특히, translate(rod.x, rod.offsetY, Rod_Z)와 rotateY(rod.angle)을 그룹 전체에 적용함.
+- WEBGL-based 3D stadium rendering  
+- Object-oriented rod and foosman management  
+- Physics-based ball movement and collision handling  
+- Kick mechanics with multiple power levels  
+- Real-time UI overlay system  
+- Opponent player movement and kick logic  
+- Input visualization overlay for user interaction feedback  
 
-Step 4. Rod 선택 기능 구현
-- Player 1의 rod 3개를 좌우 방향키로 선택 rod를 변경함.
-- 선택된 rod는 isSelected 값으로 판단함.
-- 선택된 handle은 색상 변화를 통해 시각적으로 강조함.
+---
 
-Step 5. Rod 상하 이동 구현
-- 위/아래 방향키를 누르고 있는 동안 선택된 rod의 offsetY 값을 변경함.
-- constrain()을 사용해 foosmen이 field 벽에 닿는 범위를 넘지 않도록 제한함.
-- 다른 rod로 선택이 이동되면 이전 rod의 offsetY를 0으로 되돌려 기본 위치로 복귀시킴.
+# 2. Description of the Code
 
-[Mechanics]
+## 2.1 Component Drawing
 
-Step 1. Ball 객체 생성 후 시작 지점, 이동 및 충돌 
-- drawBall()을 통해 WEBGL 공간에 sphere 형태로 공을 그림.
-- updateBall()에서 속도 기반으로 공 위치를 업데이트함.
-- 좌우/상하 벽 충돌 시 속도를 반전시켜 공이 튕기도록 구현함.
-- friction을 적용하여 공 속도가 점차 감소하도록 구현함.
-- foosman과 충돌 시 공 속도를 반전시켜 foosman을 통과하지 않고 튕기도록 구현함.
-- getServerRod()와 resetBallServer()를 사용해 새로운 play 마다 팀별 serve 위치에서 공이 시작되도록 구현함.
+### Step 1 | 2D Field → WEBGL-based 3D Field
 
-Step 2. Foosman 위치 계산 구조 
-- getFoosmanPositionsOnRod()를 구현하여 rod 상태로부터 각 foosman의 실제 world position을 계산함.
-- 이후 공 충돌, kick 판정, AI 로직 등에 활용 가능한 좌표 기반 구조를 생성함.
+The initial 2D field structure (`sketch.js`) was expanded into a 3D stadium using the WEBGL mode of p5.js.
+
+- Implemented the field, walls, center line, and goal boxes as 3D objects  
+- Positioned rods and foosmen using a 3D coordinate system  
+
+---
+
+### Step 2 | Object-Based Rod and Foosman Structure
+
+Initially, rod counts, team information, and position values were managed separately.
+
+Later, the structure was redesigned using an array of rod objects so that each rod could manage all related states internally.
+
+Each rod object contains the following information:
+
+```js
+{ count: 4, team: "p2", x: 0, offsetY: 0, angle: 0 }
+```
+
+| Key | Description |
+| :--- | :--- |
+| **count** | Number of foosmen |
+| **team** | Player team |
+| **x** | X-axis position of the rod |
+| **offsetY** | Vertical movement offset |
+| **angle** | Rotation angle of the rod |
+
+This structure allowed rod movement, rotation, and collision calculations to be handled within a unified system.
+
+---
+
+### Step 3 | Rod Group Rendering Structure
+
+`drawAllRods()` was designed to pass each rod object into `drawRodGroup()`.
+
+Inside `drawRodGroup()`, `push()` and `pop()` were used to render:
+
+- rod  
+- handle  
+- foosmen  
+
+as a single grouped structure.
+
+---
+
+### Step 4 | Rod Selection System
+
+- Player 1 can switch between three rods using the left and right arrow keys  
+- The selected rod is identified using the `isSelected` value  
+- The selected handle is visually highlighted through color changes  
+
+---
+
+### Step 5 | Vertical Rod Movement
+
+The selected rod moves vertically by updating its `offsetY` value while the up/down arrow keys are pressed.
+
+Additionally:
+
+- `constrain()` was used to prevent foosmen from moving outside the field boundaries  
+- When another rod is selected, the previous rod automatically returns to its default position (`offsetY = 0`)  
+
+---
+
+# 2.2 Mechanics
+
+### Step 1 | Ball Object and Collision Handling
+
+`drawBall()` renders the ball as a sphere within the WEBGL environment.
+
+- `updateBall()` updates the ball position based on velocity  
+-  Ball velocity is reversed and constrained when colliding with walls
+- Friction gradually slows down the ball  
+- Ball collision with foosmen includes velocity reflection and overlap correction  
+- `getServerRod()` and `resetBallServer()` initialize the ball at the correct serve position after each goal  
+
+---
+
+### Step 2 | Foosman Position Calculation System
+
+`getFoosmanPositionsOnRod()` was implemented to calculate the actual world position of each foosman based on rod states.
+
+This position system was later used for:
+
+- ball collision handling  
+- kick detection  
+- opponent player logic  
+
+---
+
+### Step 3 | Kick Detection and Rod Rotation
+
+`getNearestFoosmanToBall()` finds the foosman closest to the ball.
+
+- If the distance is within `KICK_RANGE`, the ball becomes kickable  
+- Kick strength controls both rod rotation angle and ball speed based on Spacebar press duration  
+- `rotateSelectedRod()` handles the rod rotation animation  
+
+---
+
+### Step 4 | Ball Kick Direction and Velocity
+
+The ball velocity changes when a successful kick occurs.
+
+- Player 1 kicks toward the right direction  
+- Player 2 kicks toward the left direction  
+- The difference between the ball position and foosman center position on the y-axis determines whether the kick becomes straight or diagonal  
+
+---
+
+### Step 5 | Goal Detection
+
+- Wall collision is disabled inside the goal opening area  
+- A goal is detected when the ball enters the goal box range  
+- After a goal, the score increases and the serve position resets  
+
+---
+
+# 2.3 UI
+
+### Step 1 | Score and Timer UI
+
+The score, timer, and game state texts are rendered using 2D screen coordinates independent from the 3D field.
+
+- `image(uiLayer, 0, 0)` overlays the UI on top of the WEBGL scene  
+- `scoreP1` and `scoreP2` are updated in real time  
+- Remaining game time is calculated using `gameStartTime` and `millis()`  
+- During goal animations, `pausedTime` accumulates so the timer does not decrease  
+
+---
+
+### Step 2 | Game State-Based UI Flow
+
+The `gameState` value manages transitions between:
+
+- `start`  
+- `playing`  
+- `goal`  
+- `gameover`  
+
+states.
+
+- The start state displays “Press Enter to Start”  
+- The playing state continuously updates score and timer UI  
+- The goal state displays a goal animation overlay  
+- The gameover state shows the final result screen  
+
+---
+
+### Step 3 | Input Visualization Overlay
+
+An `inputState` object was created to store:
+
+- left  
+- right  
+- up  
+- down  
+- kick  
+
+input states.
+
+- LEFT/RIGHT inputs are updated using `keyPressed()` and `keyReleased()`  
+- UP/DOWN movement uses continuous input handling through `keyIsDown()`  
+- SPACE input uses `spacePressedTime` to visualize charging states  
+
+---
+
+# 3. Issues
+
+### 1. Ball Stopping in Unreachable Areas
+
+Sometimes the ball stopped in positions unreachable by both players.
+
+**Solution:**  
+Instead of allowing the ball to completely stop, a very small velocity was continuously maintained through the friction system.
+
+---
+
+### 2. Separating WEBGL Rendering and UI Layer (AI-assisted)
+
+**Solution:**
+
+- A separate UI graphics layer (`uiLayer`) was created using `createGraphics()`  
+- Instead of drawing UI directly inside the WEBGL canvas, the UI was rendered on a dedicated 2D overlay canvas  
+- The UI layer position was synchronized every frame using `mainCanvas.getBoundingClientRect()`  
+
+---
+
+### 3. Ball Getting Stuck Inside Foosmen
+
+The ball occasionally became trapped when its position exactly overlapped with a foosman.
+
+**Solution:**  
+The ball velocity was reversed and the ball position was pushed outward from the foosman to prevent overlapping.
+
+---
+
+### 4. Opponent Player Kicking Too Frequently
+
+The opponent player performed kicks every frame, resulting in unrealistic gameplay.
+
+**Solution:**  
+A cooldown system was added so the opponent can only kick again after a certain amount of time has passed since the previous kick.
+
+---
+
+# 4. Acknowledgement of Help
+
+## AI-Assisted Components
+
+### Component Drawing
+
+- WEBGL cylinder orientation, camera setup, and lighting configuration  
+- Drawing the center circle  
+- Refactoring rod information into object arrays  
+- Updating the rendering structure so rods, handles, and foosmen are grouped inside `drawRodGroup()`  
+- Improving rod selection logic using `max()` and `min()` inside `keyPressed()`  
+- Resetting previous rod positions when switching rods  
+- Using `constrain()` to prevent foosmen from leaving the field boundary  
+
+---
+
+### Mechanics
+
+- Ball collision direction and velocity calculations  
+- Kick strength-based conversion system for rod rotation  angle and ball velocity
+- Goal serve management and ball reset logic  
+- Foosman position calculation system  
+- Opponent player movement and kick logic  
+- Preventing timer reduction during goal animations using `pausedTime`  
+
+---
+
+### UI
+
+- Creating a separate UI graphics layer (`uiLayer`) for WEBGL rendering  
+- Updating the timer logic so it only runs during the `playing` state  
+- Separating UI-related functions into dedicated files  
+- Creating the `renderGameUI()` function  
+- Designing and positioning the input key panel overlay  
 
 
-Step 3. Kick 가능 범위 및 Kick 입력  (rod 회전)
-- getNearestFoosmanToBall()을 통해 공과 가장 가까운 foosman을 탐색함.
-- 공과 foosman 사이 거리가 KICK_RANGE 이내일 경우 kick 가능한 상태로 판단함.
-- Spacebar 입력 시간을 기반으로 kick 강도를 3단계로 구분함. (이후 mcu 6050 회전 강도에 따라 3단계 구분)
-- rotateSelectedRod()에서 rod 회전 animation을 구현.
+## Future Improvements
 
-Step 4. Ball Kick, 방향 
-- kick 가능한 범위 내에서 공 속도를 변경하여 공이 이동하도록 구현함.
-- 팀 방향에 따라 Player 1은 오른쪽, Player 2는 왼쪽 방향으로 공이 이동하도록 구현함.
-- 공과 foosman 중심의 y축 차이를 이용해 직선 슛과 대각선 방향 kick을 구현함.
+- **MPU6050 Controller Input**  
+  Future versions of the game could connect a physical controller using an MPU6050 motion sensor.  
+  Instead of keyboard input, rod kick motion could be controlled through real-world rotational movement for a more immersive gameplay experience.
 
-
-Step 10. Goal Detection 
-- goal opening 영역에서는 좌우 벽 충돌을 비활성화함.
-- 골대 box 범위 내에 공이 들어오면 goal로 인식함.
-- Goal 발생 시 score 증가 및 serve reset.
-
-[UI]
-
-Step 1. Score 및 Timer UI 구현
-
-- score, timer, game state text 등을 경기장과 독립적인 2D 화면 좌표 기준으로 렌더링함.
-- image(uiLayer, 0, 0)를 사용해 최종적으로 WEBGL 화면 위에 overlay 형태로 UI를 출력함.
-- 현재 scoreP1, scoreP2 값을 실시간으로 화면에 표시함.
-- gameStartTime과 millis()를 기반으로 남은 경기 시간을 계산함.
-- Goal animation 동안 pausedTime을 누적하여 timer가 감소하지 않도록 구현함.
-
-Step 2. Game State 기반 UI 흐름 구현
-
-- gameState 값을 기준으로 start, playing, goal, gameover 상태를 구분함.
-- Start 상태에서는 “Press Enter to Start” 안내 UI를 표시함.
-- Playing 상태에서는 score 및 timer UI를 지속적으로 업데이트함.
-- Goal 상태에서는 goal overlay animation을 출력함.
-- Gameover 상태에서는 최종 결과 화면으로 전환함.
-
-
-## 3. Issues 
-1. 두 player foosmen이 닿지 않는 거리(사각지대)에 공이 멈출 경우. 
-    : 공의 마찰 구현에서 공이 완전히 멈추지 않고 아주 낮은 속도로 계속 이동하는 방식으로 해결함. 
-2. Webgl 모드와 UI 화면 모드 분리 (AI help)
-      : 
-      - WEBGL 기반 3D 경기장과 별도로 UI 전용 graphics layer(uiLayer)를 생성하여, UI를 WEBGL 캔버스 안에서 그리는 방식 대신, createGraphics()로 만든 별도 2D 오버레이 캔버스(uiLayer.canvas)로 분리함.
-      - draw()마다 mainCanvas.getBoundingClientRect() 기준으로 UI 레이어 위치를 동기화해서 캔버스와 정확히 겹치게 유지
-    
-3. 공의 충돌 처리에서 공의 위치가 foosman의 위치가 일치할때 공이 갖히는 상황 발생 
-    : 공의 속도를 반전시키고 위치를 foosman 밖으로 밀어내서 겹쳐지는 현상 해결함.
-4. Oppenent Player 의 Kick이 매 프래임마다 되어 너무 강한 플레이
-:  
-
-
-
-## 4. Acknowledge of help 
-AI help 
-[Compotnent]
-- Webgl에서 원기둥 도형의 z 축 방향 설정, camera, light 설정. 
-- drawing center circle
-- 객체 배열을 생성하고 drawRod()에서 rod 객체 하나로 rod의 모든 정보를 사용하게 만들게 하는 코드 구조 수정 
-- 기존에 분리되어있었던 rod, handle, foosmen 생성 함수를 drawRodGroup() 을 통해 그룹으로 적용하여 생성하도록 코드 update
-
-- handle Select하는 Logic에 Keypressed() 함수 수정 - p1RodIndexes 를 벗어나는 입력 범위 안정적으로 처리 위한 코드 수정.(using max, min)
-- 다른  rod 선택 시, 이전 Rod offsetY 위치 0으로 되돌리기.
-
-- foosmen이 field 벽에 닿는 범위를 넘지 않도록 제한하기 위해 constrain() 함수 생성.
-
-[Mechanics]
-- 공 충돌 방향, 속도 계산 
-- goal 이후 server player 관리 및 공 위치 변경
-- Foosman 위치 계산 구조 생성
-- 상대 player 자동 움직임 구현시 가까운 rod, fossmen 찾는 logic 생성, rod 이동, kick 간격 조정
-- Goal animation 동안 pausedTime을 누적하여 timer가 감소하지 않도록 수정.
-
-
-[UI]
-- WEBGL 기반 3D 경기장과 별도로 UI 전용 graphics layer(uiLayer)를 생성
-- Timer 에서 goal 화면 연출 제외하고 gamestate = playing 일떄만 timer 작동 하도록 수정. 
-- UI 관련 기능들 파일 분리하며 renderGameUI 함수 생성 
-
-
+- **Animation Polish**  
+  Additional animation details could be added to improve visual quality and game feedback.  
+  Examples include smoother rod rotation, ball impact effects, goal animations, camera motion, and lighting transitions.
 
